@@ -1,0 +1,56 @@
+<div class="row">
+	<div class="col-md-12">
+		<h2>Node {{status.me}} <span ng-show="status.status.hostname"><small>{{ status.status.hostname }}</small></span></h2>
+		<hr />
+	</div>
+</div>
+
+<div class="row">
+	<div class="col-md-12">
+		<h3>Node status</h3>
+		<dl class="dl-horizontal">
+			<dt>OS</dt>
+			<dd>{{ status.status.os }}</dd>
+
+			<dt>Port</dt>
+			<dd>{{ status.port }}</dd>
+
+			<dt>Memory Used</dt>
+			<dd>
+				<progressbar value="memoryPercent"><span style="white-space:nowrap;">{{ (status.status.memory.free / 1000000).toFixed(1) }}MB / {{ (status.status.memory.total / 1000000).toFixed(1) }}MB</span></progressbar>
+			</dd>
+		</dl>
+	</div>
+</div>
+
+<div class="row">
+	<div class="col-md-12">
+		<h4>Current successors:</h4>
+		{{ status.successors.join(", ") }}
+	</div>
+</div>
+
+<div class="row">
+	<div class="col-md-12">
+		<h4>Known peers</h4>
+
+		<table class="table">
+			<thead>
+				<tr>
+					<th>Node</th>
+					<th>Host</th>
+					<th>Port</th>
+					<th>Last announce</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr ng-repeat="peer in status.peers track by $index" ng-show="status.peers[$index].host">
+					<td><a ng-href="http://{{peer.host}}:{{peer.port}}/">{{ $index }}</a></td>
+					<td>{{ peer.host }}</td>
+					<td>{{ peer.port }}</td>
+					<td>{{ peer.lastAnnounce | amCalendar }}</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+</div>
