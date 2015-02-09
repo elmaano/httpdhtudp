@@ -175,25 +175,27 @@ function commandRouter(rawString){
 	}
 }
 
-if(process.argv.length === 4){
-	server = app.listen(function(){
-		console.log("Listening on "+server.address().port);
-		console.log("My ID is: "+myId);
+function setupServer(){
+	if(process.argv.length === 4){
+		server = app.listen(function(){
+			console.log("Listening on "+server.address().port);
+			console.log("My ID is: "+myId);
 
-		joinNetwork(process.argv[2]+":"+process.argv[3]);
-	});
-}
-else if(process.argv.length === 3){
-	server = app.listen(parseInt(process.argv[2]), function(){
-		console.log("Listening on "+server.address().port);
-		console.log("My ID is: "+myId);
-	});
-}
-else{
-	server = app.listen(function(){
-		console.log("Listening on "+server.address().port);
-		console.log("My ID is: "+myId);
-	});
+			joinNetwork(process.argv[2]+":"+process.argv[3]);
+		});
+	}
+	else if(process.argv.length === 3){
+		server = app.listen(parseInt(process.argv[2]), function(){
+			console.log("Listening on "+server.address().port);
+			console.log("My ID is: "+myId);
+		});
+	}
+	else{
+		server = app.listen(function(){
+			console.log("Listening on "+server.address().port);
+			console.log("My ID is: "+myId);
+		});
+	}
 }
 
 function joinNetwork(networkString){
@@ -291,7 +293,16 @@ function sendAnnounce(){
 				console.log("Lost contact with peer "+successors[0]);
 				peers[successors[0]] = null;
 				successors.splice(0, 1);
+
+				if(successors.length === 0){
+					if(process.argv.length > 2){
+						setupServer();
+						sendAnnounce();
+					}
+				}
 			}
 		});
 	}
 }
+
+setupServer();
