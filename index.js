@@ -306,11 +306,8 @@ function sendAnnounce(){
 				peers[successors[0]] = null;
 				successors.splice(0, 1);
 
-				if(successors.length === 0){
-					if(process.argv.length > 2){
-						setupServer();
-						sendAnnounce();
-					}
+				if(err.code === 'ESOCKETTIMEDOUT'){
+					setupServer();
 				}
 			}
 		});
