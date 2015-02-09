@@ -4,13 +4,13 @@ var request = require("request");
 var os = require("os");
 var server;
 
-var myId = Math.round(255*Math.random());
-
-var maxPeers = 256;
-var maxSuccessors = 3;
+var maxPeers = 500;
+var maxSuccessors = 5;
 var successors = [];
 var peers = new Array(maxPeers);
 var ranCommands = [];
+
+var myId = Math.round((maxPeers-1)*Math.random());
 
 var app = express();
 	
@@ -198,6 +198,25 @@ function joinNetwork(networkString){
 			body = JSON.parse(body);
 
 			peers = body.peers;
+
+			if(body.me === myId || peers[myId]){
+				var newId, i;
+
+				for(i=0; i<maxPeers && !newId; i++){
+					if(!peers[i]){
+						newId = i;
+					}
+				}
+
+				if(newId){
+					myId = newId;
+					console.log("New id is: "+myId);
+				}
+				else{
+					console.err("Network is full!");
+					process.exit(1);
+				}
+			}
 
 			peers[body.me] = {
 				"host": host,
