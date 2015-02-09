@@ -175,7 +175,15 @@ function commandRouter(rawString){
 	}
 }
 
-if(process.argv.length > 2){
+if(process.argv.length === 4){
+	server = app.listen(function(){
+		console.log("Listening on "+server.address().port);
+		console.log("My ID is: "+myId);
+
+		joinNetwork(process.argv[2]+":"+process.argv[3]);
+	});
+}
+else if(process.argv.length === 3){
 	server = app.listen(parseInt(process.argv[2]), function(){
 		console.log("Listening on "+server.address().port);
 		console.log("My ID is: "+myId);
