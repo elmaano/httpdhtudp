@@ -2,6 +2,7 @@ var express = require("express");
 var bodyParser = require("body-parser");
 var request = require("request");
 var os = require("os");
+var fs = require("fs");
 var server;
 
 var maxPeers = 500;
@@ -194,6 +195,12 @@ function setupServer(){
 		server = app.listen(function(){
 			console.log("Listening on "+server.address().port);
 			console.log("My ID is: "+myId);
+
+			if (fs.existsSync("connection.txt")) {
+				var connection = fs.readFileSync("connection.txt", "utf8");
+
+				joinNetwork(connection);
+			}
 		});
 	}
 }
@@ -201,7 +208,8 @@ function setupServer(){
 function joinNetwork(networkString){
 	var address = networkString.split(":");
 	var host = address[0];
-	var port = address[1];
+	var port = parseInt(address[1]);
+	console.log("http://"+host+":"+port+"/status");
 
 	request.get("http://"+host+":"+port+"/status", function(err, res, body){
 		if(!err){
@@ -232,6 +240,10 @@ function joinNetwork(networkString){
 				"host": host,
 				"port": port
 			};
+		}
+		else{
+			console.log("Could not join network");
+			process.exit(1);
 		}
 	});
 }
