@@ -38,6 +38,7 @@
 			<thead>
 				<tr>
 					<th>Node</th>
+					<th>Hostname</th>
 					<th>Host</th>
 					<th>Port</th>
 					<th>Last announce</th>
@@ -46,6 +47,7 @@
 			<tbody>
 				<tr ng-repeat="peer in status.peers track by $index" ng-show="status.peers[$index].host">
 					<td><a ng-href="http://{{peer.host}}:{{peer.port}}/">{{ $index }}</a></td>
+					<td>{{ peer.status.hostname }}</td>
 					<td>{{ peer.host }}</td>
 					<td>{{ peer.port }}</td>
 					<td>{{ peer.lastAnnounce | amCalendar }}</td>
