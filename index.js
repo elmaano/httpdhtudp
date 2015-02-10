@@ -232,7 +232,7 @@ function joinNetwork(networkString){
 				}
 				else{
 					console.err("Network is full!");
-					process.exit(1);
+					throw new Error();
 				}
 			}
 
@@ -243,7 +243,7 @@ function joinNetwork(networkString){
 		}
 		else{
 			console.log("Could not join network");
-			process.exit(1);
+			throw(err);
 		}
 	});
 }
@@ -256,7 +256,7 @@ var successorChecker = setInterval(function(){
 		var index = (myId + i) % maxPeers;
 
 		if(peers[index] && peers[index] != null){
-			if(peers[index].lastAnnounce && peers[index].lastAnnounce < (new Date()).getTime() - 10000 ){
+			if(peers[index].lastAnnounce && peers[index].lastAnnounce < (new Date()).getTime() - 30000 ){
 				console.log("Peer "+index+" is now considered dead");
 				peers[index] = null;
 			}
@@ -300,15 +300,11 @@ function sendAnnounce(){
 			},
 			agent: false
 		}, function(err, res, body){
-			if(err){
+			if(err && err.code !== 'ESOCKETTIMEDOUT'){
 				console.log(err);
 				console.log("Lost contact with peer "+successors[0]);
 				peers[successors[0]] = null;
 				successors.splice(0, 1);
-
-				if(err.code === 'ESOCKETTIMEDOUT'){
-					setupServer();
-				}
 			}
 		});
 	}
