@@ -19,6 +19,9 @@
 			<dd>
 				<progressbar value="memoryPercent"><span style="white-space:nowrap;">{{ (status.status.memory.free / 1000000).toFixed(1) }}MB / {{ (status.status.memory.total / 1000000).toFixed(1) }}MB</span></progressbar>
 			</dd>
+
+			<dt>Keys Stored</dt>
+			<dd>{{ status.status.kvStore.keys }}</dd>
 		</dl>
 	</div>
 </div>

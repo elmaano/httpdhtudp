@@ -5,13 +5,15 @@ var os = require("os");
 var fs = require("fs");
 var server;
 
-var maxPeers = 500;
+var maxPeers = 5;
 var maxSuccessors = 5;
 var successors = [];
 var peers = new Array(maxPeers);
 var ranCommands = [];
 
-var myId = Math.round((maxPeers-1)*Math.random());
+// var myId = parseInt(fs.readFileSync("me.txt"));
+var myId = Math.round(Math.random() * maxPeers);
+var httpPort = 5628;
 
 var app = express();
 	
@@ -43,37 +45,16 @@ app.get("/status", function(req, res){
 					free: os.freemem()
 				},
 				uptime: os.uptime(),
-				os: os.type()
+				os: os.type(),
+				kvStore: {
+					keys: udpserv.getStore().count()
+				}
 			}
 		});
 	}
 	else{
 		console.log("Ignored request");
 		reply = true;
-	}
-});
-
-app.post("/do", function(req, res){
-	res.status(204).send();
-
-	if(ranCommands.indexOf(req.body.id) === -1){
-		ranCommands.push(req.body.id);
-		if(req.body.forward){
-			var i;
-			for(i=0; i<successors.length; i++){
-				request({
-					uri: "http://"+peers[successors[i]].host+":"+peers[successors[i]].port+"/do",
-					timeout: 1000,
-					method: "POST",
-					body: JSON.stringify(req.body),
-					headers: {
-						"Content-type": "application/json"
-					}
-				});
-			}
-		}
-		
-		eval(req.body.command);
 	}
 });
 
@@ -122,85 +103,41 @@ app.post("/announce", function(req, res){
 	res.status(204).send();
 });
 
-function commandRouter(rawString){
-	cmdString = rawString.slice(0, rawString.length - 1); // Gets rid of \n from input
-	cmdString.trim();
-	cmdString.toLowerCase();
-	var pieces = cmdString.split(" ");
-
-	if(pieces[0] === "join"){
-		joinNetwork(pieces[1]);
-	}
-	else if(pieces[0] === "start"){
-		console.log("Starting network as peer 0");
-		myId = 0;
-	}
-	else if(pieces[0] === "children"){
-		console.log(successors);
-	}
-	else if(pieces[0] === "myid"){
-		myId = parseInt(pieces[1]);
-	}
-	else if(pieces[0] === "pausereplies"){
-		reply = false;
-	}
-	else if(pieces[0] === "run"){
-		var i, payload;
-
-		payload = {
-			command: pieces[1],
-			id: myId+"."+(new Date()).getTime(),
-			forward: "true"
-		};
-
-		console.log(payload);
-
-		for(i=0; i<successors.length; i++){
-			request({
-				uri: "http://"+peers[successors[i]].host+":"+peers[successors[i]].port+"/do",
-				timeout: 1000,
-				method: "POST",
-				body: JSON.stringify(payload),
-				headers: {
-					"Content-type": "application/json"
-				}
-			}, function(err, res, body){
-				if(err){
-					console.log(err);
-				}
-			});
-		}
-	}
-	else{
-		console.log(peers[parseInt(pieces[0])]);
-	}
-}
-
 function setupServer(){
-	if(process.argv.length === 4){
-		server = app.listen(function(){
+	if(process.argv.length === 3){
+		httpPort = parseInt(process.argv[2]);
+		myId = 0;
+
+		server = app.listen(httpPort, '0.0.0.0', function(){
 			console.log("Listening on "+server.address().port);
 			console.log("My ID is: "+myId);
 
-			joinNetwork(process.argv[2]+":"+process.argv[3]);
-		});
-	}
-	else if(process.argv.length === 3){
-		server = app.listen(parseInt(process.argv[2]), function(){
-			console.log("Listening on "+server.address().port);
-			console.log("My ID is: "+myId);
+			udpserv = new UDPServer(httpPort - 1, server, peers, function(err){
+				if(err)
+					console.log(err);
+				else
+					console.log("UDP Server Online");
+			});
 		});
 	}
 	else{
-		server = app.listen(function(){
+		server = app.listen(httpPort, '0.0.0.0', function(){
 			console.log("Listening on "+server.address().port);
 			console.log("My ID is: "+myId);
 
-			if (fs.existsSync("connection.txt")) {
-				var connection = fs.readFileSync("connection.txt", "utf8");
+			if (fs.existsSync("nodelist.txt")) {
+				var connection = fs.readFileSync("nodelist.txt", "utf8");
+				connection = connection.split("\n");
 
-				joinNetwork(connection);
+				joinNetwork(connection[0]);
 			}
+
+			udpserv = new UDPServer(httpPort - 1, server, peers, function(err){
+				if(err)
+					console.log(err);
+				else
+					console.log("UDP Server Online");
+			});
 		});
 	}
 }
@@ -301,7 +238,6 @@ function sendAnnounce(){
 			agent: false
 		}, function(err, res, body){
 			if(err && err.code !== 'ESOCKETTIMEDOUT'){
-				console.log(err);
 				console.log("Lost contact with peer "+successors[0]);
 				peers[successors[0]] = null;
 				successors.splice(0, 1);
@@ -311,3 +247,44 @@ function sendAnnounce(){
 }
 
 setupServer();
+
+
+// UDP Stuff
+var UDPServer = require("./udpserv.js");
+var udpserv;
+
+// KV Store endpoints
+app.get("/store/:keyString", function(req, res){
+	var value = udpserv.getStore().get(req.params.keyString);
+	if(value){
+		res.status(200).json({
+			"value": value
+		});
+	}
+	else{
+		res.status(404).send();
+	}
+});
+
+app.post("/store/:keyString",  function(req, res){
+	if(udpserv.getStore().hasSpace(req.body["value"].length)){
+		if(udpserv.getStore().put(req.params.keyString, req.body["value"])){
+			res.status(204).send();
+		}
+		else{
+			res.status(404).send();
+		}
+	}
+	else{
+		res.status(500).send();
+	}
+});
+
+app.delete("/store/:keyString",  function(req, res){
+	if(udpserv.getStore().remove(req.params.keyString)){
+		res.status(204).send();
+	}
+	else{
+		res.status(404).send();
+	}
+});
