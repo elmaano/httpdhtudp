@@ -175,7 +175,7 @@ function joinNetwork(networkString){
 
 			peers[body.me] = {
 				"host": host,
-				"port": port
+				"port": httpPort
 			};
 		}
 		else{
