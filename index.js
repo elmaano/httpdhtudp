@@ -5,7 +5,7 @@ var os = require("os");
 var fs = require("fs");
 var server;
 
-var maxPeers = 5;
+var maxPeers = 100;
 var maxSuccessors = 5;
 var successors = [];
 var peers = new Array(maxPeers);
