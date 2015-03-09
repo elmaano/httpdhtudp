@@ -146,9 +146,9 @@ function joinNetwork(networkString){
 	var address = networkString.split(":");
 	var host = address[0];
 	var port = parseInt(address[1]);
-	console.log("http://"+host+":"+port+"/status");
+	console.log("http://"+host+":"+httpPort+"/status");
 
-	request.get("http://"+host+":"+port+"/status", function(err, res, body){
+	request.get("http://"+host+":"+httpPort+"/status", function(err, res, body){
 		if(!err){
 			body = JSON.parse(body);
 
