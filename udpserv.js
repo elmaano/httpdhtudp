@@ -100,7 +100,7 @@ function messageHandler(msg, rinfo){
 				var valBuf = msg.slice(51);
 				var target = responsibleNode(keyBuf);
 
-				if(valBuf.length !== valLength){
+				if(valBuf.length < valLength){
 					sendUDPResponse({
 						"host": rinfo.address,
 						"port": rinfo.port
