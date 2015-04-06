@@ -7,6 +7,7 @@ var server;
 var netPeers;
 var httpServer;
 var store;
+var myId;
 var requests = {};
 
 var codes = {
@@ -27,7 +28,7 @@ var replies = {
 };
 var SENT_REPLY = -1;
 
-function UDPServer(port, httpServ, peers, callback){
+function UDPServer(port, httpServ, peers, id, callback){
 	server = dgram.createSocket("udp4");
 	httpServer = httpServ;
 
@@ -35,6 +36,7 @@ function UDPServer(port, httpServ, peers, callback){
 		server.on("listening", function(){
 			callback();
 			netPeers = peers;
+			myId = id;
 			setupStore();
 		});
 		server.on("error", function(err){
@@ -107,6 +109,7 @@ function messageHandler(msg, rinfo){
 					}, msg.slice(0, 16), replies["BADCOMMAND"]);
 				}
 				else{
+					valBuf = valBuf.slice(0, valLength);
 					// Sent it away!
 					sendRequest(target, command, keyBuf, valBuf, function(err, res){
 						if(err)
@@ -164,16 +167,19 @@ function messageHandler(msg, rinfo){
 
 function responsibleNode(keyBuf){
 	var i;
-	var alivePeers = [];
-
-	for(i=0; i<netPeers.length; i++){
-		if(netPeers[i])
-			alivePeers.push(netPeers[i]);
-	}
-	alivePeers.push({
+	var peerList = JSON.parse(JSON.stringify(netPeers));
+	peerList[myId] = {
 		"host": "localhost",
 		"port": httpServer.address().port
-	});
+	};
+
+	var alivePeers = [];
+
+	for(i=0; i<peerList.length; i++){
+		if(peerList[i]){
+			alivePeers.push(peerList[i]);
+		}
+	}
 
 	var keyHash = hashKey(keyBuf);
 	keyHash = keyHash.substring(0,5); // because we only have up to 100000 keys

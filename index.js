@@ -112,7 +112,7 @@ function setupServer(){
 			console.log("Listening on "+server.address().port);
 			console.log("My ID is: "+myId);
 
-			udpserv = new UDPServer(httpPort - 1, server, peers, function(err){
+			udpserv = new UDPServer(httpPort - 1, server, peers, myId, function(err){
 				if(err)
 					console.log(err);
 				else
@@ -131,13 +131,6 @@ function setupServer(){
 
 				joinNetwork(connection[0]);
 			}
-
-			udpserv = new UDPServer(httpPort - 1, server, peers, function(err){
-				if(err)
-					console.log(err);
-				else
-					console.log("UDP Server Online");
-			});
 		});
 	}
 }
@@ -146,9 +139,9 @@ function joinNetwork(networkString){
 	var address = networkString.split(":");
 	var host = address[0];
 	var port = parseInt(address[1]);
-	console.log("http://"+host+":"+httpPort+"/status");
+	console.log("http://"+host+":"+port+"/status");
 
-	request.get("http://"+host+":"+httpPort+"/status", function(err, res, body){
+	request.get("http://"+host+":"+port+"/status", function(err, res, body){
 		if(!err){
 			body = JSON.parse(body);
 
@@ -175,8 +168,15 @@ function joinNetwork(networkString){
 
 			peers[body.me] = {
 				"host": host,
-				"port": httpPort
+				"port": port
 			};
+
+			udpserv = new UDPServer(httpPort - 1, server, peers, myId, function(err){
+				if(err)
+					console.log(err);
+				else
+					console.log("UDP Server Online");
+			});
 		}
 		else{
 			console.log("Could not join network");
@@ -193,7 +193,7 @@ var successorChecker = setInterval(function(){
 		var index = (myId + i) % maxPeers;
 
 		if(peers[index] && peers[index] != null){
-			if(peers[index].lastAnnounce && peers[index].lastAnnounce < (new Date()).getTime() - 30000 ){
+			if(peers[index].lastAnnounce && peers[index].lastAnnounce < (new Date()).getTime() - 60000 ){
 				console.log("Peer "+index+" is now considered dead");
 				peers[index] = null;
 			}
