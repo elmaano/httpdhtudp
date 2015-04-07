@@ -156,7 +156,8 @@ function messageHandler(msg, rinfo){
 			}
 		}
 		else if(requests[idHashString].count === SENT_REPLY){
-			// Already responded, ignore
+			// Already responded, resend
+			server.send(requests[idHashString].reply, 0, requests[idHashString].reply.length, rinfo.port, rinfo.address);
 		}
 		else{
 			// Increment receive count
@@ -182,7 +183,7 @@ function responsibleNode(keyBuf){
 	}
 
 	var keyHash = hashKey(keyBuf);
-	keyHash = keyHash.substring(0,5); // because we only have up to 100000 keys
+	keyHash = keyHash.substring(27,32); // because we only have up to 100000 keys
 	keyHash = parseInt(keyHash, 16) % alivePeers.length;
 
 	return alivePeers[keyHash];
@@ -294,6 +295,10 @@ function sendUDPResponse(rinfo, idBuf, replyCode, valBuf){
 	}
 
 	server.send(responseBuf, 0, responseBuf.length, rinfo.port, rinfo.host);
+	if(requests[hashKey(idBuf)]){
+		requests[hashKey(idBuf)].count = SENT_REPLY;
+		requests[hashKey(idBuf)].reply = new Buffer(responseBuf);
+	}
 }
 
 module.exports = UDPServer;
