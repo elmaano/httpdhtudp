@@ -284,6 +284,23 @@ app.get("/store/:keyString", function(req, res){
 app.post("/store/:keyString",  function(req, res){
 	if(udpserv.getStore().hasSpace(req.body["value"].length)){
 		if(udpserv.getStore().put(req.params.keyString, req.body["value"])){
+			if(!req.body.replica){
+				var i;
+				for(i=0; i<successors.length; i++){
+					req.body.replica = true;
+					request({
+						method: "POST",
+						uri: "http://"+peers[successors[i]].host+":"+peers[successors[i]].port+"/store/"+req.params.keyString,
+						headers: {
+							"Content-type": "application/json"
+						},
+						body: JSON.stringify(req.body),
+						timeout: 500,
+						agent: false
+					}, function(){});
+				}
+			}
+
 			res.status(204).send();
 		}
 		else{
