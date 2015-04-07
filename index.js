@@ -120,6 +120,21 @@ function setupServer(){
 			});
 		});
 	}
+	else if(process.argv.length === 4){
+		httpPort = parseInt(process.argv[2]);
+
+		server = app.listen(httpPort, '0.0.0.0', function(){
+			console.log("Listening on "+server.address().port);
+			console.log("My ID is: "+myId);
+
+			if (fs.existsSync(process.argv[3])) {
+				var connection = fs.readFileSync(process.argv[3], "utf8");
+				connection = connection.split("\n");
+
+				joinNetwork(connection[0]);
+			}
+		});
+	}
 	else{
 		server = app.listen(httpPort, '0.0.0.0', function(){
 			console.log("Listening on "+server.address().port);
