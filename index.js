@@ -278,16 +278,21 @@ var udpserv;
 
 // KV Store endpoints
 app.get("/store/:keyString", function(req, res){
-	var value = udpserv.getStore().get(req.params.keyString);
-	if(value){
-		res.status(200).json({
-			"value": value
-		});
-	}
-	else{
-		res.status(404).send();
-	}
+	console.log("calling");
+	udpserv.getStore().get(req.params.keyString, function(value) {
+		console.log("Value is: "+value);
+		if(value){
+			res.status(200).json({
+				"value": value
+			});
+			res.send();
+		}
+		else{
+			res.status(404).send();
+		}
+	});
 });
+
 
 app.post("/store/:keyString",  function(req, res){
 	if(udpserv.getStore().hasSpace(req.body["value"].length)){
