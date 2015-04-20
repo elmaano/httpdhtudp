@@ -146,14 +146,6 @@ function setupServer(){
 
 				joinNetwork(connection[0]);
 			}
-			else{
-				udpserv = new UDPServer(httpPort - 1, server, peers, myId, function(err){
-					if(err)
-						console.log(err);
-					else
-						console.log("UDP Server Online");
-				});
-			}
 		});
 	}
 }
