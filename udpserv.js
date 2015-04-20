@@ -146,7 +146,7 @@ function messageHandler(msg, rinfo){
 				});
 			}
 			else if(command === "OFF"){
-				process.exit(0);
+				process.exit();
 			}
 			else{
 				sendUDPResponse({
