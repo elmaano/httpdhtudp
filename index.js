@@ -109,6 +109,7 @@ function setupServer(){
 		myId = 0;
 
 		server = app.listen(httpPort, '0.0.0.0', function(){
+			console.log("First server");
 			console.log("Listening on "+server.address().port);
 			console.log("My ID is: "+myId);
 
