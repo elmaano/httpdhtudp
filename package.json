@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "nohup node index.js &",
     "stop": "forever stopall && killall node",
     "test": "echo \"Error: no test specified\" && exit 1",
     "bootstrap": "forever start index.js 3000"
