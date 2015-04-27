@@ -18,8 +18,10 @@ Store.prototype.hasSpace = function(size){
 };
 
 Store.prototype.put = function(key, value){
-	storeSize += value.length;
-	count++;
+	if(storage[key] === undefined)
+	{
+		count++;
+	}
 
 	storage[key] = value;
 	return true;
