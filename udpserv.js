@@ -2,6 +2,7 @@ var crypto = require("crypto");
 var dgram = require("dgram");
 var Storage = require("./store.js");
 var request = require("request");
+var dnode = require('dnode');
 
 var server;
 var netPeers;
@@ -61,7 +62,7 @@ UDPServer.prototype.getStore = function(){
 function setupStore(){
 	store = new Storage();
 }
-
+var d, rem;
 function messageHandler(msg, rinfo){
 	if(msg.length >= 17 && msg.length <= 15051){
 		// Correct message length
@@ -111,19 +112,29 @@ function messageHandler(msg, rinfo){
 				else{
 					valBuf = valBuf.slice(0, valLength);
 					// Sent it away!
-					sendRequest(target, command, keyBuf, valBuf, function(err, res){
-						if(err)
-							sendUDPResponse({
-								"host": rinfo.address,
-								"port": rinfo.port
-							}, msg.slice(0, 16), replies["FAIL"]);
-						else{
-							sendUDPResponse({
-								"host": rinfo.address,
-								"port": rinfo.port
-							}, msg.slice(0, 16), res.reply);
-						}
-					});
+
+					remoteData = [target, command, keyBuf.toString("hex"), valBuf.toString("hex")];
+
+					if(!d || !rem){
+						d = dnode(1337, {weak: false});
+                        d.connect(1337);
+						d.on('remote', function (remote) {
+							rem = remote;
+						    rem.distribute(remoteData, function () {
+						        // d.end();
+						    });
+						});
+					}
+					else{
+						rem.distribute(remoteData, function () {
+					        // d.end();
+					    });
+					}
+
+					sendUDPResponse({
+						"host": rinfo.address,
+						"port": rinfo.port
+					}, msg.slice(0, 16), replies["OK"]);
 				}
 			}
 			else if(command === "DEL"){

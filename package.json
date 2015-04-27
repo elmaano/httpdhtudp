@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "forever -m1 start index.js",
+    "start": "forever -m1 start index.js && forever -m1 start distributer.js",
     "stop": "forever stopall",
     "test": "echo \"Error: no test specified\" && exit 1",
     "bootstrap": "forever start index.js 3000"
@@ -12,7 +12,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "body-parser": "^1.10.2",
+    "block-queue": "0.0.2",
+    "body-parser": "^1.12.3",
+    "dnode": "^1.2.0",
     "express": "^4.11.1",
     "forever": "^0.14.1",
     "request": "^2.51.0"
