@@ -51,7 +51,7 @@ function sendRequest(node, command, key, value, callback){
 	// 	callback = valOrCallback;
 	// }
 
-	var keyHash = hashKey(key);
+	var keyHash = hashKey(new Buffer(key, "hex"));
 
 	var requestCount = 0;
 	var requestOptions = {
