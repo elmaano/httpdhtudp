@@ -12,7 +12,7 @@ var peers = new Array(maxPeers);
 var ranCommands = [];
 
 // var myId = parseInt(fs.readFileSync("me.txt"));
-var myId = Math.round(Math.random() * maxPeers);
+var myId = Math.round(Math.random() * (maxPeers - 1));
 var httpPort = 5628;
 
 var app = express();
@@ -80,25 +80,25 @@ app.post("/announce", function(req, res){
 			status: req.body.status
 		};
 
-		if(successors.length){
-			request({
-				uri: "http://"+peers[successors[0]].host+":"+peers[successors[0]].port+"/announce",
-				method: "POST",
-				timeout: 1000,
-				body: JSON.stringify(req.body),
-				headers: {
-					"Content-type": "application/json"
-				},
-				agent: false
-			}, function(err, res, body){
-				if(err){
-					console.log(err);
-					console.log("Lost contact with peer "+successors[0]);
-					peers[successors[0]] = null;
-					successors.splice(0, 1);
-				}
-			});
-		}
+		// if(successors.length){
+		// 	request({
+		// 		uri: "http://"+peers[successors[0]].host+":"+peers[successors[0]].port+"/announce",
+		// 		method: "POST",
+		// 		timeout: 1000,
+		// 		body: JSON.stringify(req.body),
+		// 		headers: {
+		// 			"Content-type": "application/json"
+		// 		},
+		// 		agent: false
+		// 	}, function(err, res, body){
+		// 		if(err){
+		// 			console.log(err);
+		// 			console.log("Lost contact with peer "+successors[0]);
+		// 			peers[successors[0]] = null;
+		// 			successors.splice(0, 1);
+		// 		}
+		// 	});
+		// }
 	}
 	res.status(204).send();
 });
@@ -157,6 +157,9 @@ function setupServer(){
 			}
 		});
 	}
+
+	announcer = setInterval(sendAnnounce, 15000);
+	successorChecker = setInterval(checkSuccessors, 10000);
 }
 
 function joinNetwork(networkString){
@@ -174,7 +177,7 @@ function joinNetwork(networkString){
 			if(body.me === myId || peers[myId]){
 				var newId, i;
 
-				for(i=0; i<maxPeers && !newId; i++){
+				for(i=1; i<maxPeers && !newId; i++){
 					if(!peers[i]){
 						newId = i;
 					}
@@ -200,6 +203,8 @@ function joinNetwork(networkString){
 					console.log(err);
 				else
 					console.log("UDP Server Online");
+
+				sendAnnounce();
 			});
 		}
 		else{
@@ -208,8 +213,7 @@ function joinNetwork(networkString){
 		}
 	});
 }
-
-var successorChecker = setInterval(function(){
+function updateSuccessors(){
 	var i;
 	var newSuccessors = [];
 
@@ -217,7 +221,7 @@ var successorChecker = setInterval(function(){
 		var index = (myId + i) % maxPeers;
 
 		if(peers[index] && peers[index] != null){
-			if(peers[index].lastAnnounce && peers[index].lastAnnounce < (new Date()).getTime() - 60000 ){
+			if(peers[index].lastAnnounce && peers[index].lastAnnounce < (new Date()).getTime() - 120000 ){
 				console.log("Peer "+index+" is now considered dead");
 				peers[index] = null;
 			}
@@ -231,14 +235,57 @@ var successorChecker = setInterval(function(){
 		newSuccessors.pop();
 	}
 	successors = newSuccessors;
-}, 1000);
+}
+function checkSuccessors(){
+	var i;
+	var newSuccessors = [];
+	var latest = getLowestPeerIndex();
 
-var announcer = setInterval(sendAnnounce, 2000);
+	if(latest !== false && latest !== myId){
+		request.get("http://"+peers[latest].host+":"+peers[latest].port+"/status", function(err, res, body){
+			if(!err){
+				body = JSON.parse(body);
+
+				var tempPeers = body.peers;
+				tempPeers[myId] = null;
+
+				tempPeers[body.me] = {
+					"host": peers[latest].host,
+					"port": peers[latest].port
+				};
+
+				peers = tempPeers;
+
+				updateSuccessors();
+			}
+		});
+	}
+	else{
+		updateSuccessors();
+	}
+}
+
+var successorChecker, announcer;
+
+function getLowestPeerIndex(){
+	var i=0, lowest=false;
+
+	while(lowest === false && i<peers.length){
+		if(peers[i]){
+			lowest = i;
+		}
+
+		i++;
+	}
+
+	return lowest;
+}
 
 function sendAnnounce(){
-	if(successors.length){
+	var lowest = getLowestPeerIndex();
+	if(lowest !== false && lowest !== myId){
 		request({
-			uri: "http://"+peers[successors[0]].host+":"+peers[successors[0]].port+"/announce",
+			uri: "http://"+peers[lowest].host+":"+peers[lowest].port+"/announce",
 			method: "POST",
 			timeout: 1000,
 			body: JSON.stringify({
@@ -262,9 +309,9 @@ function sendAnnounce(){
 			agent: false
 		}, function(err, res, body){
 			if(err && err.code !== 'ESOCKETTIMEDOUT'){
-				console.log("Lost contact with peer "+successors[0]);
-				peers[successors[0]] = null;
-				successors.splice(0, 1);
+				console.log("Lost contact with peer "+getLowestPeerIndex());
+				peers[getLowestPeerIndex()] = null;
+				// successors.splice(0, 1);
 			}
 		});
 	}
