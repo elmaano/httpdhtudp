@@ -141,11 +141,6 @@ function messageHandler(msg, rinfo){
 				var keyBuf = msg.slice(17, 49);
 				var target = responsibleNode(keyBuf);
 
-				sendUDPResponse({
-							"host": rinfo.address,
-							"port": rinfo.port
-						}, msg.slice(0, 16), res.reply);
-
 				// Sent it away!
 				sendRequest(target, command, keyBuf, function(err, res){
 					if(err)
@@ -154,7 +149,10 @@ function messageHandler(msg, rinfo){
 							"port": rinfo.port
 						}, msg.slice(0, 16), replies["FAIL"]);
 					else{
-						
+						sendUDPResponse({
+							"host": rinfo.address,
+							"port": rinfo.port
+						}, msg.slice(0, 16), res.reply);
 					}
 				});
 			}
