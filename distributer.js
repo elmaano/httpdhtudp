@@ -43,7 +43,7 @@ var server = dnode({
 		q.push(data);
 		callback();
 	}
-});
+}, {weak: false});
 server.listen(1337);
 
 function sendRequest(node, command, key, value, callback){

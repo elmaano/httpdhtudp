@@ -115,6 +115,7 @@ function messageHandler(msg, rinfo){
 
 					remoteData = [target, command, keyBuf.toString("hex"), valBuf.toString("hex")];
 
+					var d = dnode(1337, {weak: false});
 					var d = dnode.connect(1337);
 					d.on('remote', function (remote) {
 					    remote.distribute(remoteData, function () {
