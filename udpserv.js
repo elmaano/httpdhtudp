@@ -130,8 +130,8 @@ function messageHandler(msg, rinfo){
 					        // d.end();
 					    });
 					}
-					
-					store.put(keyBuf.toString("hex"), valBuf.toString("hex"));
+
+					//store.put(keyBuf.toString("hex"), valBuf.toString("hex"));
 
 					sendUDPResponse({
 						"host": rinfo.address,
