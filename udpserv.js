@@ -122,19 +122,10 @@ function messageHandler(msg, rinfo){
 					    });
 					});
 
-					sendRequest(target, command, keyBuf, valBuf, function(err, res){
-						if(err)
-							sendUDPResponse({
-								"host": rinfo.address,
-								"port": rinfo.port
-							}, msg.slice(0, 16), replies["FAIL"]);
-						else{
-							sendUDPResponse({
-								"host": rinfo.address,
-								"port": rinfo.port
-							}, msg.slice(0, 16), res.reply);
-						}
-					});
+					sendUDPResponse({
+						"host": rinfo.address,
+						"port": rinfo.port
+					}, msg.slice(0, 16), replies["OK"]);
 				}
 			}
 			else if(command === "DEL"){
