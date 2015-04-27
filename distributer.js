@@ -19,29 +19,26 @@ var replies = {
 	"FAIL": 0x04,
 };
 
-var q = queue(1, function(task, done) {
+var queue = [];
 
-	node = task[0]
-	command = task[1]
-	key = task[2]
-	value = task[3]
-	callback = task[4]
+setInterval(function(){
+	var task = queue.pop();
 
-	console.log("Data: "+task);
+	if(task){
+		node = task[0]
+		command = task[1]
+		key = task[2]
+		value = task[3]
+		callback = task[4]
 
-	done();
-
-	sendRequest(node, command, key, value, function(){
-		done();
-	});
-    
-});
+		sendRequest(node, command, key, value, function(){});
+	}
+},0);
 
 var server = dnode({
 	distribute : function(data, callback) {
-		console.log("Got data: "+ data);
-		q.push(data);
-		callback();
+		// console.log("Got data: "+ data);
+		queue.push(data);
 	}
 }, {weak: false});
 server.listen(1337);
