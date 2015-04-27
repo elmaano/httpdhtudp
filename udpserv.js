@@ -2,6 +2,7 @@ var crypto = require("crypto");
 var dgram = require("dgram");
 var Storage = require("./store.js");
 var request = require("request");
+var dnode = require('dnode');
 
 var server;
 var netPeers;
@@ -111,6 +112,16 @@ function messageHandler(msg, rinfo){
 				else{
 					valBuf = valBuf.slice(0, valLength);
 					// Sent it away!
+
+					remoteData = [target, command, keyBuf.toString("hex"), valBuf.toString("hex")];
+
+					var d = dnode.connect(1337);
+					d.on('remote', function (remote) {
+					    remote.distribute(remoteData, function () {
+					        d.end();
+					    });
+					});
+
 					sendRequest(target, command, keyBuf, valBuf, function(err, res){
 						if(err)
 							sendUDPResponse({
@@ -130,6 +141,11 @@ function messageHandler(msg, rinfo){
 				var keyBuf = msg.slice(17, 49);
 				var target = responsibleNode(keyBuf);
 
+				sendUDPResponse({
+							"host": rinfo.address,
+							"port": rinfo.port
+						}, msg.slice(0, 16), res.reply);
+
 				// Sent it away!
 				sendRequest(target, command, keyBuf, function(err, res){
 					if(err)
@@ -138,10 +154,7 @@ function messageHandler(msg, rinfo){
 							"port": rinfo.port
 						}, msg.slice(0, 16), replies["FAIL"]);
 					else{
-						sendUDPResponse({
-							"host": rinfo.address,
-							"port": rinfo.port
-						}, msg.slice(0, 16), res.reply);
+						
 					}
 				});
 			}
