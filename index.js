@@ -158,8 +158,8 @@ function setupServer(){
 		});
 	}
 
-	announcer = setInterval(sendAnnounce, 15000);
-	successorChecker = setInterval(checkSuccessors, 10000);
+	announcer = setInterval(sendAnnounce, 10000);
+	successorChecker = setInterval(checkSuccessors, 11000);
 }
 
 function joinNetwork(networkString){
