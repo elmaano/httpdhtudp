@@ -213,7 +213,29 @@ function joinNetwork(networkString){
 		}
 	});
 }
+function updateSuccessors(){
+	var i;
+	var newSuccessors = [];
 
+	for(i=1; i<maxPeers; i++){
+		var index = (myId + i) % maxPeers;
+
+		if(peers[index] && peers[index] != null){
+			if(peers[index].lastAnnounce && peers[index].lastAnnounce < (new Date()).getTime() - 120000 ){
+				console.log("Peer "+index+" is now considered dead");
+				peers[index] = null;
+			}
+			else{
+				newSuccessors.push(index);
+			}
+		}
+	}
+
+	while(newSuccessors.length > maxSuccessors){
+		newSuccessors.pop();
+	}
+	successors = newSuccessors;
+}
 function checkSuccessors(){
 	var i;
 	var newSuccessors = [];
@@ -234,26 +256,12 @@ function checkSuccessors(){
 
 				peers = tempPeers;
 
-				for(i=1; i<maxPeers; i++){
-					var index = (myId + i) % maxPeers;
-
-					if(peers[index] && peers[index] != null){
-						if(peers[index].lastAnnounce && peers[index].lastAnnounce < (new Date()).getTime() - 120000 ){
-							console.log("Peer "+index+" is now considered dead");
-							peers[index] = null;
-						}
-						else{
-							newSuccessors.push(index);
-						}
-					}
-				}
-
-				while(newSuccessors.length > maxSuccessors){
-					newSuccessors.pop();
-				}
-				successors = newSuccessors;
+				updateSuccessors();
 			}
 		});
+	}
+	else{
+		updateSuccessors();
 	}
 }
 
