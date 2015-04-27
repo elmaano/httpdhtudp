@@ -62,7 +62,7 @@ UDPServer.prototype.getStore = function(){
 function setupStore(){
 	store = new Storage();
 }
-
+var d, rem;
 function messageHandler(msg, rinfo){
 	if(msg.length >= 17 && msg.length <= 15051){
 		// Correct message length
@@ -115,12 +115,20 @@ function messageHandler(msg, rinfo){
 
 					remoteData = [target, command, keyBuf.toString("hex"), valBuf.toString("hex")];
 
-					var d = dnode.connect(1337);
-					d.on('remote', function (remote) {
-					    remote.distribute(remoteData, function () {
-					        d.end();
+					if(!d || !rem){
+						d = dnode.connect(1337);
+						d.on('remote', function (remote) {
+							rem = remote;
+						    rem.distribute(remoteData, function () {
+						        // d.end();
+						    });
+						});
+					}
+					else{
+						rem.distribute(remoteData, function () {
+					        // d.end();
 					    });
-					});
+					}
 
 					sendUDPResponse({
 						"host": rinfo.address,
