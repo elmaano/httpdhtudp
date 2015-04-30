@@ -245,7 +245,7 @@ function sendAnnounce(){
 			if(peers[successors[i]])
 			{
 				var client = net.connect({port: 1337, host: peers[successors[i]].host}, function() {
-					client.write('"id": '+myID+', "message":"PING" ');
+					client.write('"id": '+myId+', "message":"PING" ');
 				});
 
 				client.on('data', function(data) {
@@ -308,7 +308,7 @@ aliveServer.on('data', function(data){
 	jsonData = JSON.parse(data.toString());
 	if (jsonData.message == 'PING')
 	{
-		socket.write('{"id": '+myID+', "response": "PONG"');
+		socket.write('{"id": '+myId+', "response": "PONG"');
 		peers[jsonData.id] = {
 			host: this.remoteAddress,
 			port: 5628,
