@@ -244,15 +244,16 @@ function sendAnnounce(){
 		{
 			if(typeof peers[successors[i]] !== "undefined")
 			{
-				console.log("Pinging successor");
-				host = peers[successors[i]].host
+
+				host = peers[successors[i]].host;
+				console.log("Pinging successor: " + host);
 				var client = net.connect(1337, host, function() {
 					client.write('{"id": '+myId+', "message":"PING"}');
 				});
 
 				client.on('data', function(data) {
 					var jsonData = JSON.parse(data);
-					console.log(jsonData);
+					console.log("Received: "+jsonData);
 
 					// if (typeof my_obj.someproperties === "undefined"){
 					//     console.log('the property is not available...'); // print into console
