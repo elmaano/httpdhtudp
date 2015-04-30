@@ -219,8 +219,8 @@ var successorChecker = setInterval(function(){
 
 		if(peers[index] && peers[index] != null){
 			if(peers[index].lastAnnounce && peers[index].lastAnnounce < (new Date()).getTime() - 60000 ){
-				console.log("Peer "+index+" is now considered dead");
-				peers[index] = null;
+				//console.log("Peer "+index+" is now considered dead");
+				//peers[index] = null;
 			}
 			else{
 				newSuccessors.push(index);
