@@ -242,20 +242,23 @@ function sendAnnounce(){
 	if(successors.length){
 		for(var i = 0; i <= successors.length; i++)
 		{
-			aliveClients[i] = net.connect({port: 1337, host: peers[successors[i]].host}, function() {
-				client.write("PING");
-			});
+			if(peers[successors[i]])
+			{
+				aliveClients[i] = net.connect({port: 1337, host: peers[successors[i]].host}, function() {
+					client.write("PING");
+				});
 
-			aliveClients[i].on('data', function(data) {
-				var jsonData = JSON.parse(data);
-				console.log(jsonData);
+				aliveClients[i].on('data', function(data) {
+					var jsonData = JSON.parse(data);
+					console.log(jsonData);
 
-				// if (typeof my_obj.someproperties === "undefined"){
-				//     console.log('the property is not available...'); // print into console
-				// }
+					// if (typeof my_obj.someproperties === "undefined"){
+					//     console.log('the property is not available...'); // print into console
+					// }
 
-				this.end();
-			})
+					this.end();
+				})
+			}
 
 			// request({
 			// uri: "http://"+peers[successors[i]].host+":"+peers[successors[i]].port+"/announce",
