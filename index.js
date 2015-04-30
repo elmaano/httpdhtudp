@@ -314,14 +314,14 @@ var aliveServer = net.createServer(function(socket){
 		{
 			socket.write('{"id": '+myId+', "response": "PONG"}');
 			peers[jsonData.id] = {
-				host: this.remoteAddress,
+				host: socket.remoteAddress,
 				port: 5628,
 				lastAnnounce: Math.floor(new Date()),
 				status: 100
 			};
 		}
 	});
-}).listen(1337);
+}).listen(1337, '0.0.0.0');
 
 // UDP Stuff
 var UDPServer = require("./udpserv.js");
