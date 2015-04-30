@@ -236,7 +236,7 @@ var successorChecker = setInterval(function(){
 
 var announcer = setInterval(sendAnnounce, 5000);
 
-var aliveClients = [];
+aliveClients = [];
 
 function sendAnnounce(){
 	if(successors.length){
