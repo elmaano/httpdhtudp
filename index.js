@@ -253,15 +253,14 @@ function sendAnnounce(){
 				});
 
 				client.on('data', function(data) {
-					var jsonData = JSON.parse(data);
-					console.log("Received: ");
-					console.log(jsonData);
+					console.log("Data: "+data);
+					//console.log(jsonData);
 
 					// if (typeof my_obj.someproperties === "undefined"){
 					//     console.log('the property is not available...'); // print into console
 					// }
 
-					this.end();
+					client.end();
 				})
 			}
 
