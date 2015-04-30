@@ -308,15 +308,15 @@ var aliveServer = net.createServer(function(socket){
 	socket.setEncoding('utf8');
 
 	socket.on('data', function(data){
-		console.log(data.toString());
 		jsonData = JSON.parse(data.toString());
+		console.log(jsonData);
 		if (jsonData.message == 'PING')
 		{
 			socket.write('{"id": '+myId+', "response": "PONG"}');
 			peers[jsonData.id] = {
 				host: this.remoteAddress,
 				port: 5628,
-				lastAnnounce: Math.floor(new Date() / 1000),
+				lastAnnounce: Math.floor(new Date()),
 				status: 100
 			};
 		}
