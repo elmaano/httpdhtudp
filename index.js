@@ -286,7 +286,46 @@ app.get("/store/:keyString", function(req, res){
 		});
 	}
 	else{
-		res.status(404).send();
+		if(successors.length){
+			var toSend = successors.length;
+			var noGood = 0;
+
+			var i;
+			for(i=0; i<successors.length; i++){
+				request({
+					method: "GET",
+					uri: "http://"+peers[successors[i]].host+":"+peers[successors[i]].port+"/store/"+req.params.keyString,
+					timeout: 100,
+					agent: false
+				}, function(err, response, body){
+					if(err){
+						noGood++;
+
+						if(noGood === toSend){
+							res.status(404).send();
+						}
+					}
+					else{
+						if(res.statusCode == 200){
+							body = JSON.parse(body);
+
+							res.status(200).json({
+								"value": new Buffer(body["value"], "hex")
+							});
+						}
+						else{
+							noGood++;
+							if(noGood === toSend){
+								res.status(404).send();
+							}
+						}
+					}
+				});
+			}
+		}
+		else{
+			res.status(404).send();
+		}
 	}
 });
 
@@ -327,5 +366,17 @@ app.delete("/store/:keyString",  function(req, res){
 	}
 	else{
 		res.status(404).send();
+	}
+
+	if(successors.length){
+		var i;
+		for(i=0; i<successors.length; i++){
+			request({
+				method: "DELETE",
+				uri: "http://"+peers[successors[i]].host+":"+peers[successors[i]].port+"/store/"+req.params.keyString,
+				timeout: 100,
+				agent: false
+			}, function(){});
+		}
 	}
 });
