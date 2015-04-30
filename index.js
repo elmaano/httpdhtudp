@@ -3,6 +3,7 @@ var bodyParser = require("body-parser");
 var request = require("request");
 var os = require("os");
 var fs = require("fs");
+var net = require('net');
 var server;
 
 var maxPeers = 100;
@@ -233,45 +234,81 @@ var successorChecker = setInterval(function(){
 	successors = newSuccessors;
 }, 1000);
 
-var announcer = setInterval(sendAnnounce, 2000);
+var announcer = setInterval(sendAnnounce, 5000);
+
+var aliveClients = [];
 
 function sendAnnounce(){
 	if(successors.length){
-		request({
-			uri: "http://"+peers[successors[0]].host+":"+peers[successors[0]].port+"/announce",
-			method: "POST",
-			timeout: 1000,
-			body: JSON.stringify({
-				me: myId,
-				port: server.address().port,
-				time: (new Date()).getTime(),
-				status: {
-					hostname: os.hostname(),
-					avgLoad: os.loadavg(),
-					memory:{
-						total: os.totalmem(),
-						free: os.freemem()
-					},
-					uptime: os.uptime(),
-					os: os.type()
-				}
-			}),
-			headers: {
-				"Content-type": "application/json"
-			},
-			agent: false
-		}, function(err, res, body){
-			if(err && err.code !== 'ESOCKETTIMEDOUT'){
-				console.log("Lost contact with peer "+successors[0]);
-				peers[successors[0]] = null;
-				successors.splice(0, 1);
-			}
-		});
+		for(var i = 0; i <= successors.length; i++)
+		{
+			aliveClients[i] = net.connect({port: 1337, host: peers[successors[i]].host}, function() {
+				client.write("PING");
+			});
+
+			aliveClients[i].on('data', function(data) {
+				var jsonData = JSON.parse(data);
+				console.log(jsonData);
+
+				// if (typeof my_obj.someproperties === "undefined"){
+				//     console.log('the property is not available...'); // print into console
+				// }
+
+				this.end();
+			})
+
+			// request({
+			// uri: "http://"+peers[successors[i]].host+":"+peers[successors[i]].port+"/announce",
+			// method: "POST",
+			// timeout: 1000,
+			// body: JSON.stringify({
+			// 	me: myId,
+			// 	port: server.address().port,
+			// 	time: (new Date()).getTime(),
+			// 	status: {
+			// 		// hostname: os.hostname(),
+			// 		// avgLoad: os.loadavg(),
+			// 		// memory:{
+			// 		// 	total: os.totalmem(),
+			// 		// 	free: os.freemem()
+			// 		// },
+			// 		// uptime: os.uptime(),
+			// 		// os: os.type()
+			// 	}
+			// }),
+			// headers: {
+			// 	"Content-type": "application/json"
+			// },
+			// agent: false
+			// }, function(){
+			// 	// if(err && err.code !== 'ESOCKETTIMEDOUT'){
+			// 	// 	console.log("Lost contact with peer "+successors[0]);
+			// 	// 	peers[successors[0]] = null;
+			// 	// 	successors.splice(0, 1);
+			// 	// }
+			// });
+		}
 	}
 }
 
+
+
 setupServer();
 
+//TCP Alive Server
+var aliveServer = net.createServer(function(socket){
+	socket.setEncoding('utf8');
+});
+
+aliveServer.on('data', function(data){
+	console.log(data.toString());
+	socket.write('{"id": '+myID+', "response": "PONG"');
+	aliveServer.end();
+})
+
+aliveServer.listen(1337, function(){
+
+});
 
 // UDP Stuff
 var UDPServer = require("./udpserv.js");
@@ -289,6 +326,7 @@ app.get("/store/:keyString", function(req, res){
 		if(successors.length){
 			var toSend = successors.length;
 			var noGood = 0;
+			var gotSuccess = 0;
 
 			var i;
 			for(i=0; i<successors.length; i++){
@@ -307,11 +345,16 @@ app.get("/store/:keyString", function(req, res){
 					}
 					else{
 						if(res.statusCode == 200){
-							body = JSON.parse(body);
+							gotSuccess = 1;
 
-							res.status(200).json({
-								"value": new Buffer(body["value"], "hex")
-							});
+							if(gotSuccess == 0)
+							{
+								body = JSON.parse(body);
+
+								res.status(200).json({
+									"value": new Buffer(body["value"], "hex")
+								});
+							}
 						}
 						else{
 							noGood++;
