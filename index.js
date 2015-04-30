@@ -245,7 +245,7 @@ function sendAnnounce(){
 			if(peers[successors[i]])
 			{
 				aliveClients[i] = net.connect({port: 1337, host: peers[successors[i]].host}, function() {
-					client.write('"id": '+myID+', "message":"PING" ');
+					aliveClients[i].write('"id": '+myID+', "message":"PING" ');
 				});
 
 				aliveClients[i].on('data', function(data) {
