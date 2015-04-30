@@ -316,7 +316,7 @@ var aliveServer = net.createServer(function(socket){
 			peers[jsonData.id] = {
 				host: this.remoteAddress,
 				port: 5628,
-				lastAnnounce: new Date(req.body.time),
+				lastAnnounce: Math.floor(new Date() / 1000),
 				status: 100
 			};
 		}
