@@ -242,10 +242,12 @@ function sendAnnounce(){
 	if(successors.length){
 		for(var i = 0; i <= successors.length; i++)
 		{
-			if(peers[successors[i]])
+			if(typeof peers[successors[i]] !== "undefined")
 			{
-				var client = net.connect({port: 1337, host: peers[successors[i]].host}, function() {
-					client.write('"id": '+myId+', "message":"PING" ');
+				console.log("Pinging successor");
+				host = peers[successors[i]].host
+				var client = net.connect(1337, host, function() {
+					client.write('{"id": '+myId+', "message":"PING"}');
 				});
 
 				client.on('data', function(data) {
@@ -300,29 +302,24 @@ setupServer();
 
 //TCP Alive Server
 var aliveServer = net.createServer(function(socket){
+	console.log("Client connected");
 	socket.setEncoding('utf8');
-});
 
-aliveServer.on('data', function(data){
-	console.log(data.toString());
-	jsonData = JSON.parse(data.toString());
-	if (jsonData.message == 'PING')
-	{
-		socket.write('{"id": '+myId+', "response": "PONG"');
-		peers[jsonData.id] = {
-			host: this.remoteAddress,
-			port: 5628,
-			lastAnnounce: new Date(req.body.time),
-			status: 100
-		};
-	}
-	
-	aliveServer.end();
-})
-
-aliveServer.listen(1337, function(){
-
-});
+	socket.on('data', function(data){
+		console.log(data.toString());
+		jsonData = JSON.parse(data.toString());
+		if (jsonData.message == 'PING')
+		{
+			socket.write('{"id": '+myId+', "response": "PONG"}');
+			peers[jsonData.id] = {
+				host: this.remoteAddress,
+				port: 5628,
+				lastAnnounce: new Date(req.body.time),
+				status: 100
+			};
+		}
+	});
+}).listen(1337);
 
 // UDP Stuff
 var UDPServer = require("./udpserv.js");
