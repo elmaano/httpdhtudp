@@ -335,6 +335,29 @@ var aliveServer = net.createServer(function(socket){
 			};
 		}
 
+		if(jsonData.message == 'GET')
+		{
+			key = jsonData.key;
+			var value = udpserv.getStore().get(key);
+			if(value)
+			{
+				socket.write('{"key": "'+key+'", "value":"'+value+'", "status" : "success"}');
+			}
+			else
+			{
+				socket.write('{"status":"failure"}');
+			}
+		}
+
+		if(jsonData.message == 'PUT')
+		{
+			key = jsonData.key;
+			value = jsonData.value;
+			udpserv.getStore().put(key, value);
+
+			socket.write('{"status":"success"}');
+		}
+
 		if(jsonData.queuedAnnounces && jsonData.queuedAnnounces.length){
 			jsonData.queuedAnnounces.forEach(function(announce){
 				announce.id = parseInt(announce.id);
