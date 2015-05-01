@@ -15,6 +15,7 @@ var ranCommands = [];
 // var myId = parseInt(fs.readFileSync("me.txt"));
 var myId = Math.round(Math.random() * maxPeers);
 var httpPort = 5628;
+var tcpPort = 5626;
 
 var app = express();
 	
@@ -107,6 +108,7 @@ app.post("/announce", function(req, res){
 function setupServer(){
 	if(process.argv.length === 3){
 		httpPort = parseInt(process.argv[2]);
+		tcpPort = httpPort - 2;
 		myId = 0;
 
 		server = app.listen(httpPort, '0.0.0.0', function(){
@@ -124,6 +126,7 @@ function setupServer(){
 	}
 	else if(process.argv.length === 4){
 		httpPort = parseInt(process.argv[2]);
+		tcpPort = httpPort - 2;
 
 		server = app.listen(httpPort, '0.0.0.0', function(){
 			console.log("Listening on "+server.address().port);
@@ -220,7 +223,7 @@ var successorChecker = setInterval(function(){
 		if(peers[index] && peers[index] != null){
 			if(peers[index].lastAnnounce && peers[index].lastAnnounce < (new Date()).getTime() - 60000 ){
 				//console.log("Peer "+index+" is now considered dead");
-				//peers[index] = null;
+				peers[index] = null;
 			}
 			else{
 				newSuccessors.push(index);
@@ -238,90 +241,120 @@ var announcer = setInterval(sendAnnounce, 5000);
 
 aliveClients = [];
 
+var successorClient = null;
+var successorTarget;
 function sendAnnounce(){
-	if(successors.length){
-		for(var i = 0; i <= successors.length; i++)
-		{
-			if(typeof peers[successors[i]] !== "undefined")
-			{
+	if(successors.length && peers[successors[0]]){
+		var host = peers[successors[0]].host;
+		var port = peers[successors[0]].port - 2;
 
-				host = peers[successors[i]].host;
-				console.log("Pinging successor: " + host);
-				var client = net.connect(1337, host, function() {
-					console.log("Sending data ");
-					client.write('{"id": '+myId+', "message":"PING"}');
-				});
+		// console.log("Pinging successor: " + host + ":" + port);
 
-				client.on('data', function(data) {
-					console.log("Data: "+data);
-					//console.log(jsonData);
+		var info = {
+			"id": myId, 
+			"message": "PING",
+			"httpPort": httpPort,
+			"queuedAnnounces": successorMsgQueue
+		};
 
-					// if (typeof my_obj.someproperties === "undefined"){
-					//     console.log('the property is not available...'); // print into console
-					// }
+		if(successorClient === null || successorTarget !== successors[0]){
+			successorTarget = successors[0];
+			successorClient = net.connect(port, host, function() {
+				successorClient.write(JSON.stringify(info), "utf8");
+			});
 
-					client.end();
-				})
-			}
+			successorClient.on("error", function(){
+				console.log("Peer %d considered dead", successors[0]);
 
-			// request({
-			// uri: "http://"+peers[successors[i]].host+":"+peers[successors[i]].port+"/announce",
-			// method: "POST",
-			// timeout: 1000,
-			// body: JSON.stringify({
-			// 	me: myId,
-			// 	port: server.address().port,
-			// 	time: (new Date()).getTime(),
-			// 	status: {
-			// 		// hostname: os.hostname(),
-			// 		// avgLoad: os.loadavg(),
-			// 		// memory:{
-			// 		// 	total: os.totalmem(),
-			// 		// 	free: os.freemem()
-			// 		// },
-			// 		// uptime: os.uptime(),
-			// 		// os: os.type()
-			// 	}
-			// }),
-			// headers: {
-			// 	"Content-type": "application/json"
-			// },
-			// agent: false
-			// }, function(){
-			// 	// if(err && err.code !== 'ESOCKETTIMEDOUT'){
-			// 	// 	console.log("Lost contact with peer "+successors[0]);
-			// 	// 	peers[successors[0]] = null;
-			// 	// 	successors.splice(0, 1);
-			// 	// }
-			// });
+				peers[successors[0]] = null;
+				// Drop first successor
+				successors.shift();
+
+				successorClient = null;
+			});
 		}
+		else{
+			successorClient.write(JSON.stringify(info), "utf8");
+		}
+
+		successorMsgQueue = [];
 	}
+
+	// request({
+	// uri: "http://"+peers[successors[i]].host+":"+peers[successors[i]].port+"/announce",
+	// method: "POST",
+	// timeout: 1000,
+	// body: JSON.stringify({
+	// 	me: myId,
+	// 	port: server.address().port,
+	// 	time: (new Date()).getTime(),
+	// 	status: {
+	// 		// hostname: os.hostname(),
+	// 		// avgLoad: os.loadavg(),
+	// 		// memory:{
+	// 		// 	total: os.totalmem(),
+	// 		// 	free: os.freemem()
+	// 		// },
+	// 		// uptime: os.uptime(),
+	// 		// os: os.type()
+	// 	}
+	// }),
+	// headers: {
+	// 	"Content-type": "application/json"
+	// },
+	// agent: false
+	// }, function(){
+	// 	// if(err && err.code !== 'ESOCKETTIMEDOUT'){
+	// 	// 	console.log("Lost contact with peer "+successors[0]);
+	// 	// 	peers[successors[0]] = null;
+	// 	// 	successors.splice(0, 1);
+	// 	// }
+	// });
 }
 
 
 
 setupServer();
 
+var successorMsgQueue = [];
 //TCP Alive Server
 var aliveServer = net.createServer(function(socket){
-	console.log("Client connected");
 	socket.setEncoding('utf8');
 
 	socket.on('data', function(data){
 		jsonData = JSON.parse(data.toString());
-		console.log(jsonData);
-		if (jsonData.message == 'PING')
-		{
-			socket.write('{"id": '+myId+', "response": "PONG"}');
+		jsonData.id = parseInt(jsonData.id);
+
+		if (jsonData.message == 'PING'){
+			console.log("Peer %d is alive", jsonData.id);
 			peers[jsonData.id] = {
 				host: socket.remoteAddress,
-				port: 5628,
+				port: parseInt(jsonData.httpPort),
 				lastAnnounce: Math.floor(new Date()),
 				status: 100
 			};
 		}
+
+		if(jsonData.queuedAnnounces && jsonData.queuedAnnounces.length){
+			jsonData.queuedAnnounces.forEach(function(announce){
+				announce.id = parseInt(announce.id);
+				console.log("Peer %d is alive", announce.id);
+
+				peers[announce.id] = {
+					host: announce.host,
+					port: parseInt(announce.httpPort),
+					lastAnnounce: Math.floor(new Date()),
+					status: 100
+				};
+			});
+		}
+
+		if(successors.length && successors[0] !== parseInt(jsonData.id)){
+			jsonData.host = socket.remoteAddress;
+			successorMsgQueue.push(jsonData);
+		}
 	});
-}).listen(1337, '0.0.0.0');
+}).listen(tcpPort, '0.0.0.0');
 
 // UDP Stuff
 var UDPServer = require("./udpserv.js");
