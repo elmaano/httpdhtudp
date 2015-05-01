@@ -235,9 +235,9 @@ var successorChecker = setInterval(function(){
 		newSuccessors.pop();
 	}
 	successors = newSuccessors;
-}, 1000);
+}, 5000);
 
-var announcer = setInterval(sendAnnounce, 5000);
+var announcer = setInterval(sendAnnounce, 15000);
 
 aliveClients = [];
 
