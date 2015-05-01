@@ -11,7 +11,7 @@ var store;
 var myId;
 var requests = {};
 
-var replicas = 2;
+var replicas = 3;
 
 var codes = {
 	0x01: "PUT",
@@ -129,7 +129,7 @@ function messageHandler(msg, rinfo){
 					});
 
 					var i;
-					for(i=0; i<replicas; i++){
+					for(i=1; i<=replicas; i++){
 						sendRequest(responsibleNode(keyBuf, i), command, keyBuf, valBuf, function(err, res){});
 					}
 				}
@@ -154,7 +154,7 @@ function messageHandler(msg, rinfo){
 				});
 
 				var i;
-				for(i=0; i<replicas; i++){
+				for(i=1; i<=replicas; i++){
 					sendRequest(responsibleNode(keyBuf, i), command, keyBuf, function(err, res){});
 				}
 			}
