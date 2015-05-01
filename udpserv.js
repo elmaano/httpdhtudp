@@ -2,6 +2,7 @@ var crypto = require("crypto");
 var dgram = require("dgram");
 var Storage = require("./store.js");
 var request = require("request");
+var tcpReq = require("./tcpmsg.js");
 
 var server;
 var netPeers;
@@ -9,6 +10,8 @@ var httpServer;
 var store;
 var myId;
 var requests = {};
+
+var replicas = 2;
 
 var codes = {
 	0x01: "PUT",
@@ -177,7 +180,7 @@ function responsibleNode(keyBuf, offset){
 	var alivePeers = [];
 
 	for(i=0; i<peerList.length; i++){
-		if(peerList[i]){
+		if(peerList[i] && peerList[i].alive){
 			alivePeers.push(peerList[i]);
 		}
 	}
@@ -216,72 +219,36 @@ function sendRequest(node, command, key, valOrCallback, callback){
 
 	var keyHash = hashKey(key);
 
-	var requestCount = 0;
-	var requestOptions = {
-		uri: "http://"+node.host+":"+node.port+"/store/"+keyHash,
-		timeout: 500,
-		agent: false
+	var postObj = {
+		"message": command,
+		"key": keyHash
 	};
 
-	if(command === "PUT"){
-		requestOptions.method = "POST";
-		requestOptions.body = JSON.stringify({
-			"value": valBuf.toString("hex")
-		});
-		requestOptions.headers = {
-			"Content-type": "application/json"
-		};
+	if(valBuf){
+		postObj.value = valBuf.toString("hex");
 	}
-	else if(command === "DEL"){
-		requestOptions.method = "DELETE";
-	}
-
-	var requestCallback = function(err, res, body){
-		if(err && requestCount === 0){
-			// Retry
-			request(requestOptions, requestCallback);
-		}
-		else if(err){
-			// Don't retry
-			callback("StoreForwarder "+err);
+	console.log(postObj);
+	
+	console.log("Send TCP req");
+	tcpReq(node.host, node.port - 2, postObj, function(err, res){
+		console.log(res);
+		if(err){
+			callback(err, null);
 		}
 		else{
-			// Got reply
-			if(res.statusCode == 200){
-				body = JSON.parse(body);
-
+			if(res.value){
 				callback(undefined, {
-					reply: replies["OK"],
-					value: new Buffer(body["value"], "hex")
-				});
-			}
-			else if(res.statusCode == 204){
-				callback(undefined, {
-					reply: replies["OK"]
-				});
-			}
-			else if(res.statusCode == 500){
-				callback(undefined, {
-					reply: replies["FULL"]
-				});
-			}
-			else if(res.statusCode > 500){
-				callback(undefined, {
-					reply: replies["FAIL"]
-				});
-			}
-			else if(res.statusCode === 404){
-				callback(undefined, {
-					reply: replies["404"]
+					reply: replies[res.status],
+					value: new Buffer(res.value, "hex")
 				});
 			}
 			else{
-				callback("StoreForwarder: "+res.statusCode);
+				callback(undefined, {
+					reply: replies[res.status]
+				});
 			}
 		}
-	};
-
-	request(requestOptions, requestCallback);
+	});
 }
 
 function sendUDPResponse(rinfo, idBuf, replyCode, valBuf){

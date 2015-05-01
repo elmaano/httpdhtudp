@@ -9,7 +9,7 @@ var server;
 var maxPeers = 100;
 var maxSuccessors = 5;
 var successors = [];
-var peers = new Array(maxPeers);
+var peers = [];
 var ranCommands = [];
 
 // var myId = parseInt(fs.readFileSync("me.txt"));
@@ -136,7 +136,22 @@ function setupServer(){
 				var connection = fs.readFileSync(process.argv[3], "utf8");
 				connection = connection.split("\n");
 
-				joinNetwork(connection[0]);
+				connection.forEach(function(address){
+					var node = address.split(":");
+
+					peers.push({
+						"host": node[0],
+						"port": parseInt(node[1]),
+						"alive": true
+					});
+				});
+
+				udpserv = new UDPServer(httpPort - 1, server, peers, myId, function(err){
+					if(err)
+						console.log(err);
+					else
+						console.log("UDP Server Online");
+				});
 			}
 		});
 	}
@@ -144,14 +159,22 @@ function setupServer(){
 		server = app.listen(httpPort, '0.0.0.0', function(){
 			console.log("Listening on "+server.address().port);
 			console.log("My ID is: "+myId);
+			var filename = "nodelist.txt";
 
-			if (fs.existsSync("nodelist.txt")) {
-				var connection = fs.readFileSync("nodelist.txt", "utf8");
+			if (fs.existsSync(filename)) {
+				var connection = fs.readFileSync(filename, "utf8");
 				connection = connection.split("\n");
 
-				joinNetwork(connection[0]);
-			}
-			else{
+				connection.forEach(function(address){
+					var node = address.split(":");
+
+					peers.push({
+						"host": node[0],
+						"port": parseInt(node[1]),
+						"alive": true
+					});
+				});
+
 				udpserv = new UDPServer(httpPort - 1, server, peers, myId, function(err){
 					if(err)
 						console.log(err);
@@ -163,221 +186,57 @@ function setupServer(){
 	}
 }
 
-function joinNetwork(networkString){
-	var address = networkString.split(":");
-	var host = address[0];
-	var port = parseInt(address[1]);
-	console.log("http://"+host+":"+port+"/status");
-
-	request.get("http://"+host+":"+port+"/status", function(err, res, body){
-		if(!err){
-			body = JSON.parse(body);
-
-			peers = body.peers;
-
-			if(body.me === myId || peers[myId]){
-				var newId, i;
-
-				for(i=0; i<maxPeers && !newId; i++){
-					if(!peers[i]){
-						newId = i;
-					}
-				}
-
-				if(newId){
-					myId = newId;
-					console.log("New id is: "+myId);
-				}
-				else{
-					console.err("Network is full!");
-					throw new Error();
-				}
-			}
-
-			peers[body.me] = {
-				"host": host,
-				"port": port
-			};
-
-			udpserv = new UDPServer(httpPort - 1, server, peers, myId, function(err){
-				if(err)
-					console.log(err);
-				else
-					console.log("UDP Server Online");
-			});
-		}
-		else{
-			console.log("Could not join network");
-			throw(err);
-		}
-	});
-}
-
-var successorChecker = setInterval(function(){
-	var i;
-	var newSuccessors = [];
-
-	for(i=1; i<maxPeers; i++){
-		var index = (myId + i) % maxPeers;
-
-		if(peers[index] && peers[index] != null){
-			if(peers[index].lastAnnounce && peers[index].lastAnnounce < (new Date()).getTime() - 60000 ){
-				//console.log("Peer "+index+" is now considered dead");
-				peers[index] = null;
-			}
-			else{
-				newSuccessors.push(index);
-			}
-		}
-	}
-
-	while(newSuccessors.length > maxSuccessors){
-		newSuccessors.pop();
-	}
-	successors = newSuccessors;
-}, 5000);
-
-var announcer = setInterval(sendAnnounce, 15000);
-
-aliveClients = [];
-
-var successorClient = null;
-var successorTarget;
-function sendAnnounce(){
-	if(successors.length && peers[successors[0]]){
-		var host = peers[successors[0]].host;
-		var port = peers[successors[0]].port - 2;
-
-		// console.log("Pinging successor: " + host + ":" + port);
-
-		var info = {
-			"id": myId, 
-			"message": "PING",
-			"httpPort": httpPort,
-			"queuedAnnounces": successorMsgQueue
-		};
-
-		if(successorClient === null || successorTarget !== successors[0]){
-			successorTarget = successors[0];
-			successorClient = net.connect(port, host, function() {
-				successorClient.write(JSON.stringify(info), "utf8");
-			});
-
-			successorClient.on("error", function(){
-				console.log("Peer %d considered dead", successors[0]);
-
-				peers[successors[0]] = null;
-				// Drop first successor
-				successors.shift();
-
-				successorClient = null;
-			});
-		}
-		else{
-			successorClient.write(JSON.stringify(info), "utf8");
-		}
-
-		successorMsgQueue = [];
-	}
-
-	// request({
-	// uri: "http://"+peers[successors[i]].host+":"+peers[successors[i]].port+"/announce",
-	// method: "POST",
-	// timeout: 1000,
-	// body: JSON.stringify({
-	// 	me: myId,
-	// 	port: server.address().port,
-	// 	time: (new Date()).getTime(),
-	// 	status: {
-	// 		// hostname: os.hostname(),
-	// 		// avgLoad: os.loadavg(),
-	// 		// memory:{
-	// 		// 	total: os.totalmem(),
-	// 		// 	free: os.freemem()
-	// 		// },
-	// 		// uptime: os.uptime(),
-	// 		// os: os.type()
-	// 	}
-	// }),
-	// headers: {
-	// 	"Content-type": "application/json"
-	// },
-	// agent: false
-	// }, function(){
-	// 	// if(err && err.code !== 'ESOCKETTIMEDOUT'){
-	// 	// 	console.log("Lost contact with peer "+successors[0]);
-	// 	// 	peers[successors[0]] = null;
-	// 	// 	successors.splice(0, 1);
-	// 	// }
-	// });
-}
-
-
-
 setupServer();
 
-var successorMsgQueue = [];
+
 //TCP Alive Server
-var aliveServer = net.createServer(function(socket){
+var tcpServer = net.createServer(function(socket){
 	socket.setEncoding('utf8');
 
 	socket.on('data', function(data){
 		try{
 			jsonData = JSON.parse(data.toString());
-			jsonData.id = parseInt(jsonData.id);
 
-			if (jsonData.message == 'PING'){
-					console.log("Peer %d is alive", jsonData.id);
-					peers[jsonData.id] = {
-						host: socket.remoteAddress,
-						port: parseInt(jsonData.httpPort),
-					lastAnnounce: Math.floor(new Date()),
-					status: 100
-				};
-			}
-
-			if(jsonData.message == 'GET')
+			if(jsonData.message === "GET")
 			{
 				key = jsonData.key;
 				var value = udpserv.getStore().get(key);
 				if(value)
 				{
-					socket.write('{"key": "'+key+'", "value":"'+value+'", "status" : "success"}');
+					socket.write('{"key": "'+key+'", "value":"'+value+'", "status" : "OK"}');
 				}
 				else
 				{
-					socket.write('{"status":"failure"}');
+					socket.write('{"status":"404"}');
 				}
 			}
 
-			if(jsonData.message == 'PUT')
+			if(jsonData.message === "PUT")
 			{
 				key = jsonData.key;
 				value = jsonData.value;
 				udpserv.getStore().put(key, value);
 
-				socket.write('{"status":"success"}');
+				socket.write('{"status":"OK"}');
 			}
 
-			if(jsonData.queuedAnnounces && jsonData.queuedAnnounces.length){
-				jsonData.queuedAnnounces.forEach(function(announce){
-					announce.id = parseInt(announce.id);
-					console.log("Peer %d is alive", announce.id);
-
-					peers[announce.id] = {
-						host: announce.host,
-						port: parseInt(announce.httpPort),
-						lastAnnounce: Math.floor(new Date()),
-						status: 100
-					};
-				});
+			if(jsonData.message === "DEL")
+			{
+				key = jsonData.key;
+				if(udpserv.getStore().remove(key)){
+					socket.write('{"status":"OK"}');
+				}
+				else{
+					socket.write('{"status":"404"}');
+				}
 			}
 
+			if(jsonData.message === "DEAD"){
+				nodeId = jsonData.nodeId;
 
-			if(successors.length && successors[0] !== parseInt(jsonData.id)){
-				jsonData.host = socket.remoteAddress;
-				successorMsgQueue.push(jsonData);
+				peers[nodeId].alive = false;
 			}
+
 		}
 		catch(e){
 			console.log(e);
