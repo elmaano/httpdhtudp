@@ -233,8 +233,10 @@ var tcpServer = net.createServer(function(socket){
 
 			if(jsonData.message === "DEAD"){
 				nodeId = jsonData.nodeId;
+				console.log("Node %d is dead", nodeId);
 
 				peers[nodeId].alive = false;
+				socket.write('{"status":"OK"}');
 			}
 
 		}

@@ -127,6 +127,11 @@ function messageHandler(msg, rinfo){
 							}, msg.slice(0, 16), res.reply);
 						}
 					});
+
+					var i;
+					for(i=0; i<replicas; i++){
+						sendRequest(responsibleNode(keyBuf, i), command, keyBuf, valBuf, function(err, res){});
+					}
 				}
 			}
 			else if(command === "DEL"){
@@ -147,6 +152,11 @@ function messageHandler(msg, rinfo){
 						}, msg.slice(0, 16), res.reply);
 					}
 				});
+
+				var i;
+				for(i=0; i<replicas; i++){
+					sendRequest(responsibleNode(keyBuf, i), command, keyBuf, function(err, res){});
+				}
 			}
 			else if(command === "OFF"){
 				process.exit();
@@ -227,11 +237,28 @@ function sendRequest(node, command, key, valOrCallback, callback){
 	if(valBuf){
 		postObj.value = valBuf.toString("hex");
 	}
-	console.log(postObj);
 	
-	console.log("Send TCP req");
 	tcpReq(node.host, node.port - 2, postObj, function(err, res){
-		console.log(res);
+
+		if(err && err === "DEAD"){
+			var i;
+			var deadNodeId;
+
+			for(i=0; i<netPeers.length; i++){
+				if(netPeers[i].host === node.host && netPeers[i].port === node.port){
+					deadNodeId = i;
+				}
+			}
+
+			netPeers[deadNodeId].alive = false;
+			netPeers.forEach(function(peer){
+				tcpReq(peer.host, peer.port, {"message":"DEAD", "nodeId":deadNodeId}, function(err, res){
+
+				});
+			});
+
+			callback(err, null);
+		}
 		if(err){
 			callback(err, null);
 		}
