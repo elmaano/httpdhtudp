@@ -166,7 +166,7 @@ function messageHandler(msg, rinfo){
 	}
 }
 
-function responsibleNode(keyBuf){
+function responsibleNode(keyBuf, offset){
 	var i;
 	var peerList = JSON.parse(JSON.stringify(netPeers));
 	peerList[myId] = {
@@ -184,6 +184,11 @@ function responsibleNode(keyBuf){
 
 	var keyHash = hashKey(keyBuf);
 	keyHash = keyHash.substring(27,32); // because we only have up to 100000 keys
+
+	if(offset){
+		keyHash += offset;
+	}
+
 	keyHash = parseInt(keyHash, 16) % alivePeers.length;
 
 	return alivePeers[keyHash];
