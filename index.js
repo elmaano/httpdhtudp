@@ -327,49 +327,36 @@ var aliveServer = net.createServer(function(socket){
 			jsonData.id = parseInt(jsonData.id);
 
 			if (jsonData.message == 'PING'){
-				console.log("Peer %d is alive", jsonData.id);
-				peers[jsonData.id] = {
-					host: socket.remoteAddress,
-					port: parseInt(jsonData.httpPort),
-				lastAnnounce: Math.floor(new Date()),
-				status: 100
-			};
-		}
-
-		if(jsonData.message == 'GET')
-		{
-			key = jsonData.key;
-			var value = udpserv.getStore().get(key);
-			if(value)
-			{
-				socket.write('{"key": "'+key+'", "value":"'+value+'", "status" : "success"}');
-			}
-			else
-			{
-				socket.write('{"status":"failure"}');
-			}
-		}
-
-		if(jsonData.message == 'PUT')
-		{
-			key = jsonData.key;
-			value = jsonData.value;
-			udpserv.getStore().put(key, value);
-
-			socket.write('{"status":"success"}');
-		}
-
-		if(jsonData.queuedAnnounces && jsonData.queuedAnnounces.length){
-			jsonData.queuedAnnounces.forEach(function(announce){
-				announce.id = parseInt(announce.id);
-				console.log("Peer %d is alive", announce.id);
-
-				peers[announce.id] = {
-					host: announce.host,
-					port: parseInt(announce.httpPort),
+					console.log("Peer %d is alive", jsonData.id);
+					peers[jsonData.id] = {
+						host: socket.remoteAddress,
+						port: parseInt(jsonData.httpPort),
 					lastAnnounce: Math.floor(new Date()),
 					status: 100
 				};
+			}
+
+			if(jsonData.message == 'GET')
+			{
+				key = jsonData.key;
+				var value = udpserv.getStore().get(key);
+				if(value)
+				{
+					socket.write('{"key": "'+key+'", "value":"'+value+'", "status" : "success"}');
+				}
+				else
+				{
+					socket.write('{"status":"failure"}');
+				}
+			}
+
+			if(jsonData.message == 'PUT')
+			{
+				key = jsonData.key;
+				value = jsonData.value;
+				udpserv.getStore().put(key, value);
+
+				socket.write('{"status":"success"}');
 			}
 
 			if(jsonData.queuedAnnounces && jsonData.queuedAnnounces.length){
@@ -385,6 +372,7 @@ var aliveServer = net.createServer(function(socket){
 					};
 				});
 			}
+
 
 			if(successors.length && successors[0] !== parseInt(jsonData.id)){
 				jsonData.host = socket.remoteAddress;
