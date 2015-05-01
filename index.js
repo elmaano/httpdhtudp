@@ -322,36 +322,41 @@ var aliveServer = net.createServer(function(socket){
 	socket.setEncoding('utf8');
 
 	socket.on('data', function(data){
-		jsonData = JSON.parse(data.toString());
-		jsonData.id = parseInt(jsonData.id);
+		try{
+			jsonData = JSON.parse(data.toString());
+			jsonData.id = parseInt(jsonData.id);
 
-		if (jsonData.message == 'PING'){
-			console.log("Peer %d is alive", jsonData.id);
-			peers[jsonData.id] = {
-				host: socket.remoteAddress,
-				port: parseInt(jsonData.httpPort),
-				lastAnnounce: Math.floor(new Date()),
-				status: 100
-			};
-		}
-
-		if(jsonData.queuedAnnounces && jsonData.queuedAnnounces.length){
-			jsonData.queuedAnnounces.forEach(function(announce){
-				announce.id = parseInt(announce.id);
-				console.log("Peer %d is alive", announce.id);
-
-				peers[announce.id] = {
-					host: announce.host,
-					port: parseInt(announce.httpPort),
+			if (jsonData.message == 'PING'){
+				console.log("Peer %d is alive", jsonData.id);
+				peers[jsonData.id] = {
+					host: socket.remoteAddress,
+					port: parseInt(jsonData.httpPort),
 					lastAnnounce: Math.floor(new Date()),
 					status: 100
 				};
-			});
-		}
+			}
 
-		if(successors.length && successors[0] !== parseInt(jsonData.id)){
-			jsonData.host = socket.remoteAddress;
-			successorMsgQueue.push(jsonData);
+			if(jsonData.queuedAnnounces && jsonData.queuedAnnounces.length){
+				jsonData.queuedAnnounces.forEach(function(announce){
+					announce.id = parseInt(announce.id);
+					console.log("Peer %d is alive", announce.id);
+
+					peers[announce.id] = {
+						host: announce.host,
+						port: parseInt(announce.httpPort),
+						lastAnnounce: Math.floor(new Date()),
+						status: 100
+					};
+				});
+			}
+
+			if(successors.length && successors[0] !== parseInt(jsonData.id)){
+				jsonData.host = socket.remoteAddress;
+				successorMsgQueue.push(jsonData);
+			}
+		}
+		catch(e){
+			console.log(e);
 		}
 	});
 }).listen(tcpPort, '0.0.0.0');
